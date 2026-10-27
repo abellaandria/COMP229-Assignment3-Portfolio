@@ -1,40 +1,67 @@
 
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-// Middleware to verify a user's JWT token
-const protect = (req, res, next) => {
+// Verify the user's JWT token
+const protect = async (req, res, next) => {
   try {
-    // Get the Authorization header
     const authHeader = req.headers.authorization;
 
-    // Check if a Bearer token was provided
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Access denied. No token provided."
       });
     }
 
-    // Extract the token from the header
     const token = authHeader.split(" ")[1];
 
-    // Verify the token using our secret key
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
 
-    // Store the authenticated user's ID
-    req.user = decoded;
+    const user = await User.findById(decoded.id);
 
-    // Allow the request to continue
+    if (!user) {
+      return res.status(401).json({
+        message: "User not found or account no longer exists."
+      });
+    }
+
+    req.user = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role || "user"
+    };
+
     next();
-
   } catch (error) {
-    res.status(401).json({
+    return res.status(401).json({
       message: "Invalid or expired token."
     });
   }
 };
 
-// Export the middleware
-module.exports = { protect };
+// Allow only Admin users
+const adminOnly = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Authentication required."
+    });
+  }
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Access denied. Admin privileges required."
+    });
+  }
+
+  next();
+};
+
+// Export authentication middleware
+module.exports = {
+  protect,
+  adminOnly
+};

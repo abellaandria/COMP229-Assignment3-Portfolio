@@ -2,8 +2,9 @@
 const express = require("express");
 const router = express.Router();
 
-// Import login and logout controller functions
+// Import authentication controller functions
 const {
+  signupUser,
   loginUser,
   logoutUser
 } = require("../controllers/authController");
@@ -11,11 +12,18 @@ const {
 // Import JWT authentication middleware
 const { protect } = require("../middleware/authMiddleware");
 
-// POST - Login with email and password
-router.post("/login", loginUser);
+// POST - Register a new user
+router.post("/signup", signupUser);
 
-// POST - Logout (requires a valid JWT)
+// POST - Sign in
+router.post("/signin", loginUser);
+
+// GET - Sign out
+router.get("/signout", protect, logoutUser);
+
+// Existing routes for compatibility
+router.post("/login", loginUser);
 router.post("/logout", protect, logoutUser);
 
-// Export authentication routes
+// Export router
 module.exports = router;

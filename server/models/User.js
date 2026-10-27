@@ -28,6 +28,13 @@ const userSchema = new mongoose.Schema({
     select: false
   },
 
+  // User role: Admin or regular User
+  role: {
+    type: String,
+    enum: ["admin", "user"],
+    default: "user"
+  },
+
   // Date the account was created
   created: {
     type: Date,
@@ -42,7 +49,7 @@ const userSchema = new mongoose.Schema({
 
 });
 
-// Hash the password before saving a new or changed password
+// Hash the password before saving
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
 
@@ -50,7 +57,7 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare a login password with the stored hashed password
+// Compare login password with stored hashed password
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };

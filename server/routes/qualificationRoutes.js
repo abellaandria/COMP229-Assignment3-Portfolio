@@ -12,23 +12,35 @@ const {
   deleteAllQualifications
 } = require("../controllers/qualificationController");
 
+// Import authentication and Admin middleware
+const {
+  protect,
+  adminOnly
+} = require("../middleware/authMiddleware");
+
 // GET - Retrieve all qualifications
-router.get("/", getQualifications);
+// Logged-in User and Admin can view
+router.get("/", protect, getQualifications);
 
 // GET - Retrieve one qualification by ID
-router.get("/:id", getQualificationById);
+// Logged-in User and Admin can view
+router.get("/:id", protect, getQualificationById);
 
 // POST - Create a new qualification
-router.post("/", createQualification);
+// Admin only
+router.post("/", protect, adminOnly, createQualification);
 
 // PUT - Update a qualification by ID
-router.put("/:id", updateQualification);
+// Admin only
+router.put("/:id", protect, adminOnly, updateQualification);
 
 // DELETE - Remove all qualifications
-router.delete("/", deleteAllQualifications);
+// Admin only
+router.delete("/", protect, adminOnly, deleteAllQualifications);
 
 // DELETE - Remove one qualification by ID
-router.delete("/:id", deleteQualification);
+// Admin only
+router.delete("/:id", protect, adminOnly, deleteQualification);
 
 // Export the router
 module.exports = router;

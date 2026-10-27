@@ -964,3 +964,95 @@ button:hover {
   margin: 0;
   font-size: 15px;
 }
+
+/* Sign In Page */
+.signin-container {
+  width: 90%;
+  max-width: 420px;
+  margin: 70px auto;
+  padding: 35px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.signin-container h2 {
+  text-align: center;
+  color: #8065a8;
+  margin-bottom: 25px;
+}
+
+.signin-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.signin-container form > div {
+  width: 100%;
+}
+
+.signin-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.signin-container input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d9c5e9;
+  border-radius: 8px;
+}
+
+.signin-container button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #d58fac, #9076bb);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ===== Sign In Form Layout Fix ===== */
+
+.signin-container {
+  width: 90%;
+  max-width: 450px;
+  margin: 70px auto;
+  padding: 35px;
+  box-sizing: border-box;
+  background-color: white;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(124, 106, 166, 0.12);
+}
+
+.signin-container form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+.signin-container form > div {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.signin-container input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.signin-container button {
+  width: 100%;
+  margin-top: 5px;
+}

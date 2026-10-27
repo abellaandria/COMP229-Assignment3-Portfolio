@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 
-// Import all six Project controller functions
+// Import Project controller functions
 const {
   getProjects,
   getProjectById,
@@ -12,23 +12,29 @@ const {
   deleteAllProjects
 } = require("../controllers/projectController");
 
-// GET - Retrieve all projects
-router.get("/", getProjects);
+// Import authentication and Admin middleware
+const {
+  protect,
+  adminOnly
+} = require("../middleware/authMiddleware");
 
-// GET - Retrieve one project by ID
-router.get("/:id", getProjectById);
+// GET - Retrieve all projects (User and Admin)
+router.get("/", protect, getProjects);
 
-// POST - Create a new project
-router.post("/", createProject);
+// GET - Retrieve one project by ID (User and Admin)
+router.get("/:id", protect, getProjectById);
 
-// PUT - Update a project by ID
-router.put("/:id", updateProject);
+// POST - Create a project (Admin only)
+router.post("/", protect, adminOnly, createProject);
 
-// DELETE - Remove all projects
-router.delete("/", deleteAllProjects);
+// PUT - Update a project (Admin only)
+router.put("/:id", protect, adminOnly, updateProject);
 
-// DELETE - Remove one project by ID
-router.delete("/:id", deleteProject);
+// DELETE - Remove all projects (Admin only)
+router.delete("/", protect, adminOnly, deleteAllProjects);
+
+// DELETE - Remove one project (Admin only)
+router.delete("/:id", protect, adminOnly, deleteProject);
 
 // Export the router
 module.exports = router;

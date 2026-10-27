@@ -1,11 +1,27 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+const API_URL = "http://localhost:5000/api/contacts";
+
+function readAuth() {
+  const token = sessionStorage.getItem("token");
+  const savedUser = sessionStorage.getItem("user");
+
+  try {
+    return {
+      token,
+      user: savedUser ? JSON.parse(savedUser) : null,
+    };
+  } catch {
+    return { token: null, user: null };
+  }
+}
 
 function Contact() {
   const navigate = useNavigate();
 
-  // Store the information entered in the contact form
+  // Original public contact form
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -14,11 +30,92 @@ function Contact() {
     message: "",
   });
 
-  // Track submission progress and errors
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Update form data whenever the user types
+  // Admin contact management
+  const [auth, setAuth] = useState(readAuth);
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const [editForm, setEditForm] = useState({
+    firstname: "",
+    lastname: "",
+    contactNumber: "",
+    email: "",
+    message: "",
+  });
+
+  const isAdmin = Boolean(
+    auth.token && auth.user?.role === "admin"
+  );
+
+  // Detect Sign In and Sign Out
+  useEffect(() => {
+    const updateAuth = () => setAuth(readAuth());
+
+    window.addEventListener("authChanged", updateAuth);
+
+    return () => {
+      window.removeEventListener("authChanged", updateAuth);
+    };
+  }, []);
+
+  // Load submitted contacts for Admin only
+  useEffect(() => {
+    if (!isAdmin) {
+      setContacts([]);
+      setEditingId(null);
+      setAdminError("");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadContacts = async () => {
+      setLoading(true);
+      setAdminError("");
+
+      try {
+        const response = await fetch(API_URL, {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+          signal: controller.signal,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Unable to load contacts."
+          );
+        }
+
+        if (!controller.signal.aborted) {
+          setContacts(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setAdminError(error.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadContacts();
+
+    return () => controller.abort();
+  }, [isAdmin, auth.token]);
+
+  // Original public form input
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -28,57 +125,169 @@ function Contact() {
     }));
   };
 
-  // Submit contact information to the Express backend
+  // Submit visitor message to MongoDB
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     setErrorMessage("");
 
     try {
-      // Send data to the MongoDB Contact API
-      const response = await fetch(
-        "http://localhost:5000/api/contacts",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-            body: JSON.stringify({
-              firstname: formData.firstName,
-              lastname: formData.lastName,
-              contactNumber: formData.contactNumber,
-              email: formData.email,
-              message: formData.message,
-          }),
-        }
-      );
-
-      // Check if the backend successfully saved the data
-      if (!response.ok) {
-        throw new Error("Failed to save contact information.");
-      }
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstname: formData.firstName,
+          lastname: formData.lastName,
+          contactNumber: formData.contactNumber,
+          email: formData.email,
+          message: formData.message,
+        }),
+      });
 
       const result = await response.json();
 
-      console.log("Contact saved successfully:", result);
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Failed to save contact information."
+        );
+      }
 
-      // Redirect to the homepage after successful submission
       navigate("/", {
         state: {
           message:
             "Thank you for reaching out! Your message has been submitted successfully.",
         },
       });
-
     } catch (error) {
-      console.error("Error submitting contact form:", error);
-
-      setErrorMessage(
-        "Unable to submit your information. Please try again."
-      );
+      setErrorMessage(error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Open Admin Edit form
+  const handleEdit = (contact) => {
+    if (!isAdmin) return;
+
+    setEditingId(contact._id);
+    setAdminError("");
+
+    setEditForm({
+      firstname: contact.firstname || "",
+      lastname: contact.lastname || "",
+      contactNumber: contact.contactNumber || "",
+      email: contact.email || "",
+      message: contact.message || "",
+    });
+  };
+
+  // Update Admin Edit form fields
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  // Save edited contact
+  const handleSaveEdit = async (event) => {
+    event.preventDefault();
+
+    if (!isAdmin || !editingId || saving) return;
+
+    setSaving(true);
+    setAdminError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${editingId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.token}`,
+          },
+          body: JSON.stringify(editForm),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to update contact."
+        );
+      }
+
+      setContacts((previous) =>
+        previous.map((contact) =>
+          contact._id === editingId ? data : contact
+        )
+      );
+
+      setEditingId(null);
+      window.alert("Contact Updated Successfully!");
+    } catch (error) {
+      setAdminError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete a contact - Admin only
+  const handleDelete = async (contact) => {
+    if (!isAdmin || deletingId) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the message from ${contact.firstname} ${contact.lastname}?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(contact._id);
+    setAdminError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${contact._id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to delete contact."
+        );
+      }
+
+      setContacts((previous) =>
+        previous.filter(
+          (item) => item._id !== contact._id
+        )
+      );
+
+      if (editingId === contact._id) {
+        setEditingId(null);
+      }
+
+      window.alert("Contact Deleted Successfully!");
+    } catch (error) {
+      setAdminError(error.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -96,7 +305,7 @@ function Contact() {
 
         <div className="contact-content">
 
-          {/* Contact Information */}
+          {/* Original Contact Information */}
           <div className="contact-info">
             <h2>Let's Connect</h2>
 
@@ -121,7 +330,7 @@ function Contact() {
             </div>
           </div>
 
-          {/* Contact Form */}
+          {/* Original Public Contact Form */}
           <form className="contact-form" onSubmit={handleSubmit}>
             <h2>Send Me a Message</h2>
 
@@ -184,22 +393,178 @@ function Contact() {
                 value={formData.message}
                 onChange={handleChange}
                 required
-              ></textarea>
+              />
             </div>
 
-            {/* Display an error if submission fails */}
             {errorMessage && (
               <p role="alert" style={{ color: "crimson" }}>
                 {errorMessage}
               </p>
             )}
 
-            <button type="submit" disabled={isSubmitting}>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Sending..." : "Send Message"}
             </button>
           </form>
-
         </div>
+
+        {/* Admin-only Contact Management */}
+        {isAdmin && (
+          <div style={{ marginTop: "50px" }}>
+            <p className="section-label">
+              ADMIN CONTACT MANAGEMENT
+            </p>
+
+            <h2>Submitted Contact Messages</h2>
+
+            {loading && <p>Loading contacts...</p>}
+
+            {adminError && (
+              <p role="alert" style={{ color: "crimson" }}>
+                {adminError}
+              </p>
+            )}
+
+            {!loading &&
+              !adminError &&
+              contacts.length === 0 && (
+                <p>No contact messages found.</p>
+              )}
+
+            {!loading && contacts.length > 0 && (
+              <div className="education-grid">
+                {contacts.map((contact) => (
+                  <div
+                    className="education-card"
+                    key={contact._id}
+                  >
+                    <h2>
+                      {contact.firstname} {contact.lastname}
+                    </h2>
+
+                    <p>
+                      <strong>Email:</strong>{" "}
+                      {contact.email}
+                    </p>
+
+                    <p>
+                      <strong>Phone:</strong>{" "}
+                      {contact.contactNumber || "Not provided"}
+                    </p>
+
+                    <p>
+                      <strong>Message:</strong>{" "}
+                      {contact.message}
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "15px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(contact)}
+                        disabled={Boolean(deletingId)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(contact)}
+                        disabled={Boolean(deletingId)}
+                        style={{
+                          backgroundColor: "#B84A62",
+                          color: "#FFFFFF",
+                        }}
+                      >
+                        {deletingId === contact._id
+                          ? "Deleting..."
+                          : "Delete"}
+                      </button>
+                    </div>
+
+                    {/* Edit form for selected contact */}
+                    {editingId === contact._id && (
+                      <form
+                        onSubmit={handleSaveEdit}
+                        style={{ marginTop: "20px" }}
+                      >
+                        <h3>Edit Contact</h3>
+
+                        <label>First Name</label>
+                        <input
+                          name="firstname"
+                          value={editForm.firstname}
+                          onChange={handleEditChange}
+                          required
+                        />
+
+                        <label>Last Name</label>
+                        <input
+                          name="lastname"
+                          value={editForm.lastname}
+                          onChange={handleEditChange}
+                          required
+                        />
+
+                        <label>Contact Number</label>
+                        <input
+                          name="contactNumber"
+                          value={editForm.contactNumber}
+                          onChange={handleEditChange}
+                        />
+
+                        <label>Email</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={editForm.email}
+                          onChange={handleEditChange}
+                          required
+                        />
+
+                        <label>Message</label>
+                        <textarea
+                          name="message"
+                          value={editForm.message}
+                          onChange={handleEditChange}
+                          rows={4}
+                          required
+                        />
+
+                        <button
+                          type="submit"
+                          disabled={saving}
+                        >
+                          {saving
+                            ? "Saving..."
+                            : "Update Contact"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          disabled={saving}
+                          style={{ marginLeft: "10px" }}
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </section>
     </main>
   );

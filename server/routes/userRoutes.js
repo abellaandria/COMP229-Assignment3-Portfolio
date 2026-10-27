@@ -12,26 +12,29 @@ const {
   deleteAllUsers
 } = require("../controllers/userController");
 
-// Import JWT authentication middleware
-const { protect } = require("../middleware/authMiddleware");
+// Import authentication and Admin middleware
+const {
+  protect,
+  adminOnly
+} = require("../middleware/authMiddleware");
 
-// GET - Retrieve all users (protected)
-router.get("/", protect, getUsers);
+// GET - Retrieve all users (Admin only)
+router.get("/", protect, adminOnly, getUsers);
 
-// GET - Retrieve one user by ID (protected)
-router.get("/:id", protect, getUserById);
+// GET - Retrieve one user (Admin only)
+router.get("/:id", protect, adminOnly, getUserById);
 
-// POST - Create a new user (protected)
-router.post("/", protect, createUser);
+// POST - Create a new user (Admin only)
+router.post("/", protect, adminOnly, createUser);
 
-// PUT - Update a user by ID (protected)
-router.put("/:id", protect, updateUser);
+// PUT - Update a user (Admin only)
+router.put("/:id", protect, adminOnly, updateUser);
 
-// DELETE - Remove all users (protected)
-router.delete("/", protect, deleteAllUsers);
+// DELETE - Remove all users (Admin only)
+router.delete("/", protect, adminOnly, deleteAllUsers);
 
-// DELETE - Remove one user by ID (protected)
-router.delete("/:id", protect, deleteUser);
+// DELETE - Remove one user (Admin only)
+router.delete("/:id", protect, adminOnly, deleteUser);
 
 // Export the router
 module.exports = router;

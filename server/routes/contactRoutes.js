@@ -12,23 +12,35 @@ const {
   deleteAllContacts
 } = require("../controllers/contactController");
 
-// GET - Retrieve all contacts
-router.get("/", getContacts);
+// Import authentication and Admin middleware
+const {
+  protect,
+  adminOnly
+} = require("../middleware/authMiddleware");
 
-// GET - Retrieve one contact by ID
-router.get("/:id", getContactById);
+// GET - Retrieve all contact messages
+// Admin only
+router.get("/", protect, adminOnly, getContacts);
 
-// POST - Add a new contact
+// GET - Retrieve one contact message by ID
+// Admin only
+router.get("/:id", protect, adminOnly, getContactById);
+
+// POST - Submit a contact form
+// Public visitors can send messages
 router.post("/", createContact);
 
 // PUT - Update a contact by ID
-router.put("/:id", updateContact);
+// Admin only
+router.put("/:id", protect, adminOnly, updateContact);
 
 // DELETE - Remove all contacts
-router.delete("/", deleteAllContacts);
+// Admin only
+router.delete("/", protect, adminOnly, deleteAllContacts);
 
 // DELETE - Remove one contact by ID
-router.delete("/:id", deleteContact);
+// Admin only
+router.delete("/:id", protect, adminOnly, deleteContact);
 
 // Export the router
 module.exports = router;
