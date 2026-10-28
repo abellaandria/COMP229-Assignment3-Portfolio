@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
+// Use Render API for production and localhost for development
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 function Signup() {
   const navigate = useNavigate();
 
@@ -33,7 +37,7 @@ function Signup() {
     try {
       // Send signup information to Express backend
       const response = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        `${API_URL}/api/auth/signup`,
         {
           method: "POST",
           headers: {

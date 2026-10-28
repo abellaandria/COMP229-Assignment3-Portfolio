@@ -5,7 +5,10 @@ import portfolioImage from "../assets/project-portfolio.jpg";
 import photoViewerImage from "../assets/project-photo-viewer.jpg";
 import databaseImage from "../assets/project-database.jpg";
 
-const API_URL = "http://localhost:5000/api/projects";
+// Use Render API in production and localhost in development
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+}/api/projects`;
 
 // Empty form fields
 const emptyForm = {

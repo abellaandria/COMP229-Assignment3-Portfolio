@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Use the deployed API when configured, otherwise use localhost
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 function Signin() {
   const navigate = useNavigate();
 
@@ -17,7 +21,7 @@ function Signin() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/signin",
+        `${API_URL}/api/auth/signin`,
         {
           method: "POST",
           headers: {
